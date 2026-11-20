@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시간 여행 짝 맞추기 ⏳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{--wood:#6b4423;--wood2:#5a3819;--cream:#fff6dc;--ink:#3b2412;--gold:#ffcf3f;--old:#8a5a2b;--new:#3e7bd6;--oldbg:#f7ead2;--newbg:#e3efff}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:'Jua','Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:var(--ink);user-select:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.08) 0 2px,transparent 2px 22px),repeating-linear-gradient(0deg,var(--wood) 0 22px,var(--wood2) 22px 24px);min-height:100vh}
+  h1{margin:10px 0 6px;text-align:center;color:var(--gold);font-size:clamp(22px,3vw,36px);text-shadow:3px 3px 0 #2b1709}
+  button{font-family:inherit;cursor:pointer;touch-action:manipulation;color:var(--ink)}
+  .hidden{display:none !important}
+  .panel{background:var(--cream);border:4px solid var(--ink);border-radius:12px;box-shadow:6px 6px 0 rgba(0,0,0,.35)}
+  .btn{border:3px solid var(--ink);border-radius:10px;padding:10px 18px;font-size:20px;background:#fff;box-shadow:3px 3px 0 var(--ink);transition:transform .08s}
+  .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .btn.primary{background:var(--gold)} .btn.green{background:#8fd46b} .btn.red{background:#ff8a7a} .btn.blue{background:#9fd0ff}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .small-btn{font-size:15px;padding:5px 10px;box-shadow:2px 2px 0 var(--ink)}
+
+  /* 시작 화면 */
+  #setup{max-width:660px;margin:20px auto;padding:24px 28px}
+  #setup h2{margin:0 0 6px;font-size:26px}
+  .step{margin:18px 0} .step-title{font-size:21px;margin-bottom:10px}
+  .choice-row{display:flex;gap:10px;flex-wrap:wrap}
+  .choice{min-width:90px;font-size:22px}
+  .choice.on{background:var(--gold);outline:3px solid #fff;outline-offset:-7px}
+  .name-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .ava{font-size:32px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border:3px solid var(--ink);border-radius:50%;flex:0 0 46px}
+  .ava.sm{font-size:20px;width:32px;height:32px;flex-basis:32px;border-width:2px}
+  .name-row input{flex:1;font-family:inherit;font-size:21px;padding:8px 12px;border:3px solid var(--ink);border-radius:8px}
+  .rules-box{background:#fff;border:3px dashed #b08a5a;border-radius:10px;padding:10px 14px;font-size:17px;line-height:1.7;text-align:left}
+
+  /* 게임 화면 */
+  #game{display:grid;grid-template-columns:1fr 290px;gap:14px;width:min(99vw,1320px);margin:0 auto;padding:0 8px 20px;align-items:start}
+  #table{background:#4a2c12;border:4px solid #2b1709;border-radius:14px;padding:12px;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .card{aspect-ratio:3/4;perspective:900px;cursor:pointer;position:relative}
+  .card .in{position:absolute;inset:0;transition:transform .45s;transform-style:preserve-3d}
+  .card.up .in{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:3px solid var(--ink);border-radius:10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.4)}
+  .back{background:repeating-linear-gradient(45deg,#5b3fa8 0 10px,#6a4cbf 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:clamp(28px,3.4vw,46px)}
+  .back small{font-size:clamp(11px,1.1vw,14px);margin-top:4px;opacity:.9}
+  .card:not(.up):not(.gone):hover .back{filter:brightness(1.15)}
+  .front{transform:rotateY(180deg);display:flex;flex-direction:column;background:var(--oldbg)}
+  .front.new{background:var(--newbg)}
+  .bar{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;color:#fff;font-size:clamp(11px,1.1vw,15px);background:var(--old)}
+  .front.new .bar{background:var(--new)}
+  .front svg{width:100%;display:block;border-bottom:2px solid var(--ink)}
+  .txt{flex:1;display:flex;align-items:center;justify-content:center;padding:4px 6px;font-size:clamp(11px,1.15vw,15px);line-height:1.3;text-align:center}
+  .card.gone{visibility:hidden}
+  .card.match .face{box-shadow:0 0 0 4px #7dff6a,0 0 16px 6px #b8ff9f}
+  .card.miss .face{box-shadow:0 0 0 4px #ff6b6b}
+  .card.peek .in{transform:rotateY(180deg)}
+  .card.swirl{animation:swirl .8s ease-in-out}
+  @keyframes swirl{50%{transform:rotate(180deg) scale(.6)}}
+
+  #side{display:flex;flex-direction:column;gap:10px}
+  #turnBox{padding:12px;text-align:center}
+  #turnBox .who{font-size:26px;display:flex;align-items:center;justify-content:center;gap:8px}
+  #turnBox .sub{font-size:16px;margin-top:4px;opacity:.85}
+  #score{padding:8px 10px}
+  .sc{display:flex;align-items:center;gap:8px;font-size:19px;padding:5px 6px;border-radius:8px}
+  .sc.now{background:#ffe98a}
+  .sc .pts{margin-left:auto;white-space:nowrap}
+  .sc .tag{font-size:13px}
+  #btnRow{display:flex;flex-wrap:wrap;gap:8px}
+  #peekBtn{width:100%;font-size:19px}
+  #left{padding:8px 12px;font-size:16px;line-height:1.6}
+  #log{padding:8px 10px;font-size:14px;line-height:1.5;max-height:200px;overflow:auto;background:rgba(255,255,255,.88);border:3px solid var(--ink);border-radius:8px}
+  #log div:first-child{font-weight:bold}
+
+  /* 모달 */
+  #overlay{position:fixed;inset:0;background:rgba(30,15,5,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+  #modal{width:min(780px,96vw);max-height:94vh;overflow:auto;padding:20px 24px;text-align:center;animation:pop .25s ease-out}
+  @keyframes pop{from{transform:scale(.7);opacity:0}}
+  #modal .big{font-size:58px;line-height:1}
+  .bounce{animation:bounce .7s ease-in-out infinite}
+  @keyframes bounce{50%{transform:translateY(-10px) scale(1.08)}}
+  #modal h2{margin:6px 0 4px;font-size:30px}
+  #modal p{font-size:21px;line-height:1.55;margin:10px 0}
+  .pair{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
+  .pair .bigcard{width:min(250px,38vw);border:4px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--oldbg);text-align:center}
+  .pair .bigcard.new{background:var(--newbg)}
+  .pair .bigcard .bar{font-size:17px;padding:5px 10px}
+  .pair .bigcard svg{width:100%;display:block;border-bottom:2px solid var(--ink)}
+  .pair .bigcard .txt{font-size:18px;min-height:64px;padding:8px}
+  .arrow{font-size:42px;animation:bounce 1s infinite}
+  .frame{background:#fff;border:3px dashed #b08a5a;border-radius:10px;padding:10px;font-size:20px;margin:8px 0}
+  textarea.say{width:100%;font-family:inherit;font-size:19px;padding:8px;border:3px solid var(--ink);border-radius:8px;resize:vertical;min-height:56px}
+  .ex{font-size:18px;text-align:left;background:#fff6c9;border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.6}
+  .feedback{font-size:24px;margin:12px 0;padding:10px;border-radius:10px}
+  .feedback.ok{background:#d8f7c8}.feedback.no{background:#ffe0dc}
+  .modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--gold);border:4px solid var(--ink);border-radius:12px;padding:10px 22px;font-size:24px;z-index:80;box-shadow:4px 4px 0 var(--ink);transition:opacity .3s;white-space:nowrap}
+  #fx{position:fixed;inset:0;pointer-events:none;z-index:90}
+  .rank{display:flex;align-items:center;gap:12px;font-size:22px;padding:10px 14px;border:3px solid var(--ink);border-radius:10px;margin:8px 0;background:#fff}
+  .rank.first{background:#fff1a8;font-size:26px}
+  .rank .pts{margin-left:auto}
+  .awards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .award{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px;font-size:17px}
+  .award b{display:block;font-size:19px}
+  table.sum{width:100%;border-collapse:collapse;font-size:16px;margin-top:8px;background:#fff}
+  table.sum th,table.sum td{border:2px solid var(--ink);padding:6px;text-align:left;vertical-align:top}
+  table.sum th{background:#ffe9a8}
+
+  @media (max-width:900px){
+    #game{grid-template-columns:1fr}
+    #table{grid-template-columns:repeat(4,1fr)}
+  }
+</style>
+</head>
+<body>
+<h1>⏳ 보너스 게임: 시간 여행 짝 맞추기!</h1>
+
+<section id="setup" class="panel">
+  <h2>⏳ 게임 준비</h2>
+  <div class="step">
+    <div class="step-title">① 몇 명이 함께 하나요?</div>
+    <div class="choice-row" id="countRow">
+      <button class="btn choice" data-n="2">2명</button>
+      <button class="btn choice" data-n="3">3명</button>
+      <button class="btn choice" data-n="4">4명</button>
+    </div>
+  </div>
+  <div class="step hidden" id="nameStep">
+    <div class="step-title">② 순서대로 이름을 써 주세요</div>
+    <div id="nameList"></div>
+  </div>
+  <div class="step hidden" id="ruleStep"><div class="rules-box" id="rulesText"></div></div>
+  <div style="text-align:center;margin-top:16px">
+    <button class="btn primary hidden" id="startBtn" style="font-size:26px;padding:12px 40px">시간 여행 출발! 🚀</button>
+  </div>
+</section>
+
+<section id="game" class="hidden">
+  <div id="table"></div>
+  <div id="side">
+    <div id="turnBox" class="panel"><div class="who" id="turnName">-</div><div class="sub" id="turnSub">카드 2장을 뒤집어요!</div></div>
+    <div id="score" class="panel"></div>
+    <button class="btn blue" id="peekBtn">🔍 돋보기 쓰기 (2초 엿보기)</button>
+    <div id="left" class="panel"></div>
+    <div id="btnRow">
+      <button class="btn small-btn" id="ruleBtn">📜 규칙</button>
+      <button class="btn small-btn" id="muteBtn">🔊 소리</button>
+      <button class="btn small-btn red" id="endBtn">🏁 끝내기</button>
+    </div>
+    <div id="log"></div>
+  </div>
+</section>
+
+<div id="overlay" class="hidden"><div id="modal" class="panel"></div></div>
+<div id="toast" class="hidden"></div>
+<canvas id="fx"></canvas>
+
+<script>
+/* =========================================================
+   데이터 (게임키트 「시간 여행 짝 카드」 18장)
+   ========================================================= */
+const RULES_HTML = `
+<b>놀이 방법 (2~4명)</b><br>
+① 카드 18장이 뒤집혀 섞여 있어요. 내 차례에 카드 <b>2장</b>을 눌러 뒤집어요.<br>
+② <b>같은 지역</b>의 <b>⏪옛날 ↔ 오늘날⏩</b> 카드가 나오면 짝이에요!<br>
+③ 짝을 찾으면 <b>"어떻게 변했는지" 한 문장</b>으로 말해요. 친구들이 👍 인정하면 카드를 가져가고 <b>한 번 더!</b><br>
+④ 짝이 아니면 카드를 다시 덮고 다음 친구 차례예요. 어디에 무엇이 있었는지 잘 기억해요!<br>
+⑤ <b>🔍 돋보기</b>: 한 게임에 한 번, 덮인 카드를 2초 동안 엿볼 수 있어요.<br>
+⑥ <b>🔥 콤보</b>: 연속으로 짝을 찾으면 콤보! / 가끔 <b>🌀 시간 소용돌이</b>가 불어서 카드가 섞여요.<br>
+⑦ 카드를 모두 가져가면 끝! <b>짝을 가장 많이 모은 사람이 +50골드</b> 🏆`;
+
+const REGION_INFO = {
+  '영종도':{ic:'✈️'}, '안산':{ic:'🏭'}, '정선':{ic:'⛏️'}
+};
+const CARDS = [
+  {r:'영종도',era:'old',t:'여러 개의 작은 섬이 있었어요.'},
+  {r:'영종도',era:'new',t:'섬이 하나로 합쳐지고 국제공항이 생겼어요.'},
+  {r:'영종도',era:'old',t:'육지에 가려면 배를 타야 했어요.'},
+  {r:'영종도',era:'new',t:'다리·고속 국도·철도로 육지에 가요.'},
+  {r:'영종도',era:'old',t:'고기잡이, 염전, 농사를 지었어요.'},
+  {r:'영종도',era:'new',t:'공항·숙박 시설·상점에서 일해요.'},
+  {r:'안산',era:'old',t:'논과 밭이 많은 농어촌 마을이었어요.'},
+  {r:'안산',era:'new',t:'반월 국가 산업 단지가 생겼어요.'},
+  {r:'안산',era:'old',t:'강 하구에 작은 포구가 있었어요.'},
+  {r:'안산',era:'new',t:'간척으로 육지가 되고 아파트가 들어섰어요.'},
+  {r:'안산',era:'old',t:'주민 대부분이 농사를 지었어요.'},
+  {r:'안산',era:'new',t:'공장이나 생활을 편리하게 하는 일을 해요.'},
+  {r:'정선',era:'old',t:'탄광에서 석탄을 캤어요.'},
+  {r:'정선',era:'new',t:'문 닫은 광산이 석탄 역사 체험관이 되었어요.'},
+  {r:'정선',era:'old',t:'석탄을 실어 나르던 철길이 있었어요.'},
+  {r:'정선',era:'new',t:'철길에서 레일 바이크를 타요.'},
+  {r:'정선',era:'old',t:'광부와 밭농사를 짓는 주민이 많았어요.'},
+  {r:'정선',era:'new',t:'관광과 관련된 일을 하는 주민이 많아요.'},
+];
+// 카드 순서상 짝 (옛날 카드 바로 다음 오늘날 카드가 같은 주제) → 예시 문장용
+CARDS.forEach((c,i)=>c.id=i);
+const AVATARS = [
+  {e:'🐰',c:'#ffb3c6'},{e:'🐻',c:'#ffd29c'},{e:'🐯',c:'#ffe066'},{e:'🐼',c:'#b9e8ff'}
+];
+
+/* =========================================================
+   픽셀 그림 (SVG)
+   ========================================================= */
+const SKY = `<rect width="160" height="22" fill="#7cc8f5"/><rect y="16" width="160" height="6" fill="#bfe6ff"/>
+  <rect x="14" y="5" width="18" height="4" fill="#fff"/><rect x="18" y="2" width="10" height="3" fill="#fff"/>`;
+const SEA = `<rect y="22" width="160" height="58" fill="#2f86d6"/>
+  ${[30,42,54,66].map((y,i)=>`<rect x="${10+i*17}" y="${y}" width="10" height="2" fill="#6fb6f0"/><rect x="${85+i*13}" y="${y+5}" width="10" height="2" fill="#6fb6f0"/>`).join('')}`;
+const house=(x,y)=>`<rect x="${x}" y="${y+4}" width="9" height="6" fill="#fff3d6" stroke="#3b2412" stroke-width="1"/><polygon points="${x-1},${y+5} ${x+4.5},${y} ${x+10},${y+5}" fill="#e4572e" stroke="#3b2412" stroke-width="1"/>`;
+const boat=(x,y,c='#e74c3c')=>`<rect x="${x}" y="${y}" width="9" height="3" fill="${c}"/><rect x="${x+3}" y="${y-4}" width="3" height="4" fill="#fff"/>`;
+const tower=(x,y,h,c='#fff')=>`<rect x="${x}" y="${y}" width="9" height="${h}" fill="${c}" stroke="#2a4a7a" stroke-width="1"/>${Array.from({length:Math.floor(h/5)},(_,k)=>`<rect x="${x+2}" y="${y+2+k*5}" width="2" height="2" fill="#3e7bd6"/><rect x="${x+5}" y="${y+2+k*5}" width="2" height="2" fill="#3e7bd6"/>`).join('')}`;
+const mountains = `<rect width="160" height="80" fill="#a9dcff"/>
+  <polygon points="-10,62 25,14 60,62" fill="#2f7d4a"/><polygon points="35,62 75,8 115,62" fill="#3c9a5a"/><polygon points="95,62 130,16 170,62" fill="#2f7d4a"/>
+  <polygon points="25,14 31,22 19,22" fill="#e9f5ec"/><polygon points="75,8 82,17 68,17" fill="#e9f5ec"/>
+  <rect y="62" width="160" height="18" fill="#7cc35a"/>`;
+const ART = {
+  '영종도old': `${SKY}${SEA}
+    <ellipse cx="38" cy="44" rx="26" ry="12" fill="#e8c27a"/><ellipse cx="38" cy="43" rx="23" ry="10" fill="#6cbf4f"/>${house(26,34)}${house(40,35)}
+    <ellipse cx="90" cy="35" rx="16" ry="8" fill="#e8c27a"/><ellipse cx="90" cy="34" rx="14" ry="6.5" fill="#6cbf4f"/>
+    <ellipse cx="70" cy="64" rx="18" ry="9" fill="#e8c27a"/><ellipse cx="70" cy="63" rx="16" ry="7.5" fill="#6cbf4f"/>${house(65,55)}
+    <ellipse cx="122" cy="52" rx="14" ry="8" fill="#e8c27a"/><ellipse cx="122" cy="51" rx="12" ry="6.5" fill="#6cbf4f"/>
+    ${boat(104,40)}${boat(50,72,'#f39c12')}${boat(130,70,'#3e7bd6')}
+    <polygon points="146,22 160,22 160,80 152,80" fill="#7cc35a"/>`,
+  '영종도new': `${SKY}${SEA}
+    <polygon points="8,40 30,28 110,28 128,40 122,72 20,74" fill="#e8c27a"/><polygon points="12,41 32,31 108,31 124,41 118,70 23,71" fill="#7cc35a"/>
+    <rect x="30" y="38" width="76" height="4" fill="#666"/><rect x="34" y="39.5" width="6" height="1" fill="#fff"/><rect x="48" y="39.5" width="6" height="1" fill="#fff"/><rect x="62" y="39.5" width="6" height="1" fill="#fff"/><rect x="76" y="39.5" width="6" height="1" fill="#fff"/><rect x="90" y="39.5" width="6" height="1" fill="#fff"/>
+    <rect x="52" y="46" width="34" height="9" fill="#dfe8f2" stroke="#3b2412" stroke-width="1"/><ellipse cx="69" cy="46" rx="10" ry="3" fill="#9fc3e6"/>
+    <rect x="30" y="58" width="76" height="3" fill="#666"/>
+    ${tower(22,52,18)}${tower(32,48,22)}${tower(88,54,16,'#ffe9b0')}${tower(98,50,20,'#ffe9b0')}
+    <polygon points="62,12 82,15 62,17" fill="#fff"/><rect x="66" y="9" width="3" height="10" fill="#cfd8e3"/>
+    <rect x="122" y="50" width="30" height="2" fill="#c0392b"/><polygon points="130,50 136,42 142,50" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+    <polygon points="146,22 160,22 160,80 150,80" fill="#7cc35a"/>${tower(148,24,22)}`,
+  '안산old': `${SKY}<rect y="22" width="160" height="58" fill="#7cc35a"/>
+    ${[0,1,2,3].map(i=>[0,1,2].map(j=>`<rect x="${4+i*28}" y="${26+j*18}" width="25" height="15" fill="${(i+j)%2?'#c9a25f':'#9ed36a'}" stroke="#6a4a22" stroke-width="1"/>`).join('')).join('')}
+    ${house(14,32)}${house(46,50)}${house(72,32)}
+    <rect x="116" y="22" width="44" height="58" fill="#2f86d6"/><rect x="120" y="40" width="10" height="2" fill="#6fb6f0"/><rect x="138" y="58" width="10" height="2" fill="#6fb6f0"/>
+    <rect x="112" y="64" width="12" height="4" fill="#8a5a2b"/>${boat(128,52)}${boat(144,70,'#f39c12')}`,
+  '안산new': `${SKY}<rect y="22" width="160" height="58" fill="#8fcf6a"/><rect y="64" width="160" height="6" fill="#555"/><rect x="0" y="66.5" width="160" height="1" fill="#fff" stroke-dasharray="4 4"/>
+    ${[6,40,74].map(x=>`<rect x="${x}" y="40" width="28" height="16" fill="#cfd5dd" stroke="#3b2412" stroke-width="1"/><polygon points="${x},40 ${x+7},34 ${x+14},40 ${x+21},34 ${x+28},40" fill="#9aa4b0" stroke="#3b2412" stroke-width="1"/><rect x="${x+20}" y="24" width="4" height="12" fill="#c0392b"/><circle cx="${x+24}" cy="20" r="3" fill="#e9eef3"/><circle cx="${x+29}" cy="16" r="4" fill="#e9eef3"/>`).join('')}
+    ${tower(108,30,32)}${tower(119,26,36,'#ffe9b0')}${tower(130,34,28)}${tower(141,28,34,'#ffe9b0')}`,
+  '정선old': `${mountains}
+    <path d="M20,62 v-10 a8,8 0 0 1 16,0 v10 z" fill="#3b2412"/><path d="M84,62 v-12 a9,9 0 0 1 18,0 v12 z" fill="#3b2412"/>
+    <polygon points="44,62 52,54 60,62" fill="#222"/><polygon points="108,62 116,52 124,62" fill="#222"/>
+    <rect y="70" width="160" height="2" fill="#6a4a22"/>${Array.from({length:16},(_,i)=>`<rect x="${i*10+2}" y="68" width="3" height="6" fill="#6a4a22"/>`).join('')}
+    <rect x="130" y="62" width="16" height="7" fill="#555" stroke="#222"/><circle cx="133" cy="70" r="2" fill="#222"/><circle cx="143" cy="70" r="2" fill="#222"/><rect x="132" y="59" width="12" height="3" fill="#222"/>`,
+  '정선new': `${mountains}
+    <polygon points="120,62 150,10 160,10 160,62" fill="#fff"/><line x1="10" y1="20" x2="150" y2="10" stroke="#3b2412" stroke-width="1"/><rect x="70" y="15" width="6" height="5" fill="#c0392b"/>
+    <rect x="40" y="48" width="36" height="14" fill="#f7ead2" stroke="#3b2412" stroke-width="1"/><polygon points="38,48 58,40 78,48" fill="#8a5a2b"/><rect x="54" y="54" width="6" height="8" fill="#8a5a2b"/>
+    <rect y="70" width="160" height="2" fill="#6a4a22"/>${Array.from({length:16},(_,i)=>`<rect x="${i*10+2}" y="68" width="3" height="6" fill="#6a4a22"/>`).join('')}
+    <rect x="96" y="63" width="14" height="5" fill="#e74c3c"/><circle cx="99" cy="69" r="2" fill="#222"/><circle cx="107" cy="69" r="2" fill="#222"/><circle cx="101" cy="60" r="2" fill="#ffd29c"/><circle cx="106" cy="60" r="2" fill="#ffd29c"/>`,
+};
+const art = c => `<svg viewBox="0 0 160 80" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid slice">${ART[c.r+c.era]}</svg>`;
+const eraLabel = c => c.era==='old' ? '⏪ 옛날' : '오늘날 ⏩';
+
+/* =========================================================
+   효과음 / 폭죽 / 도우미
+   ========================================================= */
+let AC=null, muted=false;
+function tone(f,d,type='square',v=.07,delay=0){ if(muted) return; try{
+  AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume();
+  const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f,t);
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0008,t+d); o.connect(g).connect(AC.destination); o.start(t); o.stop(t+d+.02);}catch(e){} }
+const SFX={
+  flip:()=>{tone(520,.05,'triangle',.07);tone(780,.05,'triangle',.05,.04)},
+  good:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.15,'square',.05,i*.08)),
+  bad:()=>{tone(320,.18,'sawtooth',.05);tone(220,.3,'sawtooth',.05,.16)},
+  fanfare:()=>[523,523,523,659,784,659,784,1047].forEach((f,i)=>tone(f,.22,'square',.06,i*.14)),
+  turn:()=>{tone(784,.08,'triangle',.06);tone(1047,.14,'triangle',.06,.08)},
+  swirl:()=>{for(let i=0;i<14;i++)tone(300+Math.sin(i)*200+i*40,.08,'triangle',.05,i*.05)},
+  peek:()=>{for(let i=0;i<5;i++)tone(900+i*150,.06,'sine',.06,i*.05)},
+  combo:()=>[784,988,1175,1568].forEach((f,i)=>tone(f,.12,'square',.05,i*.06)),
+};
+const sfx=n=>{try{SFX[n]&&SFX[n]()}catch(e){}};
+const CV=document.getElementById('fx'),CX=CV.getContext('2d');let parts=[],fxRun=false;
+const FXC=['#ff5f45','#ffcf3f','#5bd16b','#3b82f6','#b45bff','#ff7ac8','#fff'];
+function confetti(n=120,x=innerWidth/2,y=innerHeight*.35){ CV.width=innerWidth;CV.height=innerHeight;
+  for(let i=0;i<n;i++)parts.push({x:x+(Math.random()-.5)*120,y,vx:(Math.random()-.5)*16,vy:-Math.random()*13-4,c:FXC[i%FXC.length],w:5+Math.random()*7,h:4+Math.random()*5,r:Math.random()*6,vr:(Math.random()-.5)*.4,life:140+Math.random()*80});
+  if(!fxRun){fxRun=true;requestAnimationFrame(fxLoop);} }
+function fxLoop(){ CX.clearRect(0,0,CV.width,CV.height);
+  for(const p of parts){p.vy+=.32;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.life--;CX.save();CX.translate(p.x,p.y);CX.rotate(p.r);CX.fillStyle=p.c;CX.fillRect(-p.w/2,-p.h/2,p.w,p.h);CX.restore();}
+  parts=parts.filter(p=>p.life>0&&p.y<CV.height+30); if(parts.length)requestAnimationFrame(fxLoop); else {fxRun=false;CX.clearRect(0,0,CV.width,CV.height);} }
+
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const ava=(p,cls='')=>`<span class="ava ${cls}" style="background:${p.av.c}">${p.av.e}</span>`;
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.remove('hidden');t.style.opacity=1;clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.classList.add('hidden'),300);},1900);}
+function log(m){$('log').insertAdjacentHTML('afterbegin',`<div>${m}</div>`);}
+function speak(text){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ko-KR';u.rate=.95;speechSynthesis.speak(u);}catch(e){}}
+function showModal(h){$('modal').innerHTML=h;$('overlay').classList.remove('hidden');$('modal').scrollTop=0;}
+function closeModal(){$('overlay').classList.add('hidden');}
+function modalOK(h,label='확인 ▶'){return new Promise(r=>{showModal(h+`<div class="modal-btns"><button class="btn primary" id="okB">${label}</button></div>`);$('okB').onclick=()=>{closeModal();r();};});}
+
+/* =========================================================
+   상태
+   ========================================================= */
+const S={count:0,players:[],turn:0,deck:[],open:[],busy:false,over:false,misses:0,totalPairs:9};
+
+/* 시작 화면 */
+$('rulesText').innerHTML=RULES_HTML;
+document.querySelectorAll('#countRow .choice').forEach(b=>b.onclick=()=>{
+  sfx('flip');
+  document.querySelectorAll('#countRow .choice').forEach(x=>x.classList.remove('on')); b.classList.add('on'); S.count=+b.dataset.n;
+  const old=[...document.querySelectorAll('#nameList input')].map(i=>i.value);
+  $('nameList').innerHTML=Array.from({length:S.count},(_,i)=>`<div class="name-row"><span class="ava" style="background:${AVATARS[i].c}">${AVATARS[i].e}</span>
+    <input maxlength="8" placeholder="${i+1}번 친구 이름" value="${esc(old[i]||'')}"></div>`).join('');
+  ['nameStep','ruleStep','startBtn'].forEach(id=>$(id).classList.remove('hidden'));
+  document.querySelector('#nameList input').focus();
+});
+$('nameList').addEventListener('keydown',e=>{ if(e.key!=='Enter')return;
+  const ins=[...document.querySelectorAll('#nameList input')],i=ins.indexOf(e.target); if(i<ins.length-1)ins[i+1].focus(); else $('startBtn').click(); });
+$('startBtn').onclick=startGame;
+$('muteBtn').onclick=()=>{muted=!muted;$('muteBtn').textContent=muted?'🔇 소리':'🔊 소리';if(!muted)sfx('turn');};
+$('ruleBtn').onclick=()=>{showModal(`<h2>📜 놀이 방법</h2><div class="rules-box">${RULES_HTML}</div><div class="modal-btns"><button class="btn primary" id="rc">닫기</button></div>`);$('rc').onclick=closeModal;};
+$('endBtn').onclick=()=>{ if(S.busy) return toast('카드가 다 정리된 뒤에 눌러 주세요');
+  showModal(`<div class="big">🏁</div><h2>게임을 끝낼까요?</h2><p>지금까지 모은 짝으로 순위를 정해요.</p>
+  <div class="modal-btns"><button class="btn red" id="eY">네, 끝내요</button><button class="btn" id="eN">계속할래요</button></div>`);
+  $('eY').onclick=()=>{closeModal();showResults();}; $('eN').onclick=closeModal; };
+
+function startGame(){
+  const names=[...document.querySelectorAll('#nameList input')].map((i,k)=>i.value.trim()||`${k+1}번 친구`);
+  S.players=names.map((n,i)=>({name:n,av:AVATARS[i],pairs:[],combo:0,maxCombo:0,peek:1,tries:0}));
+  Object.assign(S,{turn:0,deck:shuffle(CARDS.map(c=>({...c,gone:false}))),open:[],busy:false,over:false,misses:0});
+  $('setup').classList.add('hidden'); $('game').classList.remove('hidden'); $('log').innerHTML='';
+  buildTable(); renderSide();
+  log(`게임 시작! ${S.players.map(p=>esc(p.name)).join(' → ')} 순서예요.`);
+  sfx('fanfare'); confetti(90);
+  showModal(`<div class="big bounce">⏳</div><h2>시간 여행 출발!</h2>
+    <p>카드 18장이 섞였어요. 같은 지역의 <b>옛날</b>과 <b>오늘날</b> 카드를 찾아요!<br>첫 번째 차례는 <b>${esc(S.players[0].name)}</b>!</p>
+    <div class="modal-btns"><button class="btn primary" id="g0">좋아요!</button></div>`);
+  $('g0').onclick=closeModal;
+}
+
+/* =========================================================
+   테이블
+   ========================================================= */
+function cardFront(c){
+  return `<div class="face front ${c.era}"><div class="bar"><span>${eraLabel(c)}</span><span>${c.r}</span></div>${art(c)}<div class="txt">${esc(c.t)}</div></div>`;
+}
+function buildTable(){
+  $('table').innerHTML=S.deck.map((c,i)=>`<div class="card ${c.gone?'gone':''}" data-i="${i}"><div class="in">
+    <div class="face back">⏳<small>시간 여행 카드</small></div>${cardFront(c)}</div></div>`).join('');
+  document.querySelectorAll('.card').forEach(el=>el.onclick=()=>flip(+el.dataset.i));
+}
+const cardEl=i=>document.querySelector(`.card[data-i="${i}"]`);
+function renderSide(){
+  const p=S.players[S.turn];
+  $('turnName').innerHTML=`${ava(p)} ${esc(p.name)}의 차례`;
+  $('turnSub').textContent = S.open.length===1 ? '한 장 더 뒤집어요!' : '카드 2장을 뒤집어요!';
+  const top=Math.max(...S.players.map(x=>x.pairs.length));
+  $('score').innerHTML=S.players.map((x,i)=>`<div class="sc ${i===S.turn?'now':''}">${ava(x,'sm')}
+    <span>${top>0&&x.pairs.length===top&&S.players.filter(y=>y.pairs.length===top).length===1?'👑':''}${esc(x.name)}</span>
+    <span class="tag">${x.combo>=2?'🔥'+x.combo:''}${x.peek?'🔍':''}</span><span class="pts">🃏 ${x.pairs.length}짝</span></div>`).join('');
+  $('peekBtn').disabled = !p.peek || S.open.length>0 || S.busy || S.over;
+  $('peekBtn').textContent = p.peek ? '🔍 돋보기 쓰기 (2초 엿보기)' : '🔍 돋보기를 이미 썼어요';
+  const left={}; S.deck.filter(c=>!c.gone).forEach(c=>{left[c.r]=left[c.r]||{old:0,new:0};left[c.r][c.era]++;});
+  $('left').innerHTML=`<b>남은 카드 ${S.deck.filter(c=>!c.gone).length}장</b><br>`+
+    Object.keys(REGION_INFO).map(r=>`${REGION_INFO[r].ic} ${r}: 옛날 ${left[r]?.old||0} · 오늘날 ${left[r]?.new||0}`).join('<br>');
+}
+
+/* 카드 뒤집기 */
+async function flip(i){
+  const c=S.deck[i];
+  if(S.busy||S.over||c.gone||S.open.includes(i)) return;
+  cardEl(i).classList.add('up'); sfx('flip'); S.open.push(i); renderSide();
+  if(S.open.length<2) return;
+  S.busy=true; renderSide();
+  const p=S.players[S.turn]; p.tries++;
+  const [a,b]=S.open.map(k=>S.deck[k]);
+  await sleep(650);
+  if(a.r===b.r && a.era!==b.era){
+    S.open.forEach(k=>cardEl(k).classList.add('match')); sfx('good');
+    const ok=await sayChange(p, a.era==='old'?a:b, a.era==='old'?b:a);
+    S.open.forEach(k=>cardEl(k).classList.remove('match'));
+    if(ok){
+      S.open.forEach(k=>{S.deck[k].gone=true; cardEl(k).classList.add('gone');});
+      p.pairs.push([a.era==='old'?a:b, a.era==='old'?b:a]);
+      p.combo++; p.maxCombo=Math.max(p.maxCombo,p.combo);
+      log(`🃏 ${esc(p.name)} ${a.r} 짝 획득!${p.combo>=2?` 🔥${p.combo}콤보`:''}`);
+      if(p.combo>=2){ sfx('combo'); toast(`🔥 ${p.name} ${p.combo}콤보!`); }
+      S.open=[]; S.busy=false;
+      if(S.deck.every(c=>c.gone)) return showResults();
+      renderSide(); toast(`🎉 ${p.name} 한 번 더!`);
+      return;
+    } else {
+      log(`🤔 ${esc(p.name)} ${a.r} 짝을 찾았지만 문장이 아쉬워서 다시 덮어요`);
+      await flipBack(); return nextTurn();
+    }
+  } else {
+    S.open.forEach(k=>cardEl(k).classList.add('miss')); sfx('bad');
+    $('turnSub').textContent = a.r!==b.r ? '❌ 지역이 달라요!' : (a.era==='old'?'❌ 둘 다 옛날 카드예요!':'❌ 둘 다 오늘날 카드예요!');
+    log(`❌ ${esc(p.name)}: ${a.r}(${a.era==='old'?'옛날':'오늘날'}) + ${b.r}(${b.era==='old'?'옛날':'오늘날'})`);
+    await sleep(1700);
+    S.open.forEach(k=>cardEl(k).classList.remove('miss'));
+    await flipBack(); S.misses++;
+    // 🌀 시간 소용돌이 : 실수가 쌓이면 가끔 카드가 섞여요
+    if(S.misses>=4 && Math.random()<.3){ S.misses=0; await swirl(); }
+    return nextTurn();
+  }
+}
+async function flipBack(){ S.open.forEach(k=>cardEl(k).classList.remove('up')); S.open=[]; await sleep(450); }
+function nextTurn(){
+  const cur=S.players[S.turn]; cur.combo=0;
+  S.turn=(S.turn+1)%S.players.length; S.busy=false; renderSide(); sfx('turn');
+  toast(`${S.players[S.turn].av.e} ${S.players[S.turn].name}의 차례!`);
+}
+
+/* 짝 → 변화 말하기 */
+function sayChange(p, oldC, newC){
+  return new Promise(resolve=>{
+    const others=S.players.filter(x=>x!==p).map(x=>esc(x.name)).join(', ');
+    const big=c=>`<div class="bigcard ${c.era}"><div class="bar"><span>${eraLabel(c)}</span><span>${c.r}</span></div>${art(c)}<div class="txt">${esc(c.t)}</div></div>`;
+    confetti(60);
+    showModal(`<div class="big bounce">🎉</div><h2>${ava(p,'sm')} ${esc(p.name)}, ${oldC.r} 짝을 찾았어요!</h2>
+      <div class="pair">${big(oldC)}<div class="arrow">➡️</div>${big(newC)}</div>
+      <p>카드를 가져가려면 <b>${oldC.r}가 어떻게 변했는지</b> 한 문장으로 말해요!</p>
+      <div class="frame">"옛날 ${oldC.r}에는 ________________, 오늘날에는 ________________."</div>
+      <textarea class="say" placeholder="말하면서 적어 봐도 좋아요 (안 적어도 돼요)"></textarea>
+      <div class="modal-btns"><button class="btn small-btn" id="tts">🔊 카드 읽어 주기</button><button class="btn small-btn" id="hint">💡 힌트 보기</button></div>
+      <div id="hintBox"></div>
+      <div id="judge"><div class="modal-btns"><button class="btn primary" id="said">다 말했어요! 친구들 판정 ▶</button></div></div>`);
+    $('tts').onclick=()=>speak(`옛날 ${oldC.r}. ${oldC.t} 오늘날 ${newC.r}. ${newC.t}`);
+    $('hint').onclick=()=>{ $('hintBox').innerHTML=`<div class="ex">💡 두 카드를 이어서 말해 봐요.<br>"옛날에는 <b>${esc(oldC.t.replace(/\.$/,''))}</b>. 그런데 오늘날에는 <b>${esc(newC.t.replace(/\.$/,''))}</b>."<br>👉 이제 내 말로 바꿔서 한 문장으로 말해 봐요!</div>`; $('hint').disabled=true; };
+    $('said').onclick=()=>{
+      $('judge').innerHTML=`<p>👀 <b>${others}</b>! "어떻게 변했는지" 잘 말했나요?<br><small>옛날 모습과 오늘날 모습이 둘 다 들어가 있으면 인정!</small></p>
+        <div class="modal-btns"><button class="btn green" id="yes">👍 인정!</button><button class="btn red" id="no">🤔 다시 생각해 봐요</button></div>`;
+      $('yes').onclick=()=>{ try{speechSynthesis.cancel()}catch(e){} sfx('fanfare'); confetti(120); closeModal(); resolve(true); };
+      $('no').onclick=()=>{ try{speechSynthesis.cancel()}catch(e){} sfx('bad'); closeModal(); resolve(false); };
+    };
+  });
+}
+
+/* 🔍 돋보기 */
+$('peekBtn').onclick=async ()=>{
+  const p=S.players[S.turn]; if(!p.peek||S.busy||S.open.length||S.over) return;
+  p.peek=0; S.busy=true; renderSide(); sfx('peek'); log(`🔍 ${esc(p.name)} 돋보기 사용!`);
+  toast('🔍 2초 동안 잘 봐요!');
+  document.querySelectorAll('.card:not(.gone)').forEach(el=>el.classList.add('peek'));
+  await sleep(2000);
+  document.querySelectorAll('.card').forEach(el=>el.classList.remove('peek'));
+  await sleep(450); S.busy=false; renderSide();
+};
+
+/* 🌀 시간 소용돌이 */
+async function swirl(){
+  sfx('swirl'); log('🌀 시간 소용돌이! 남은 카드가 섞였어요');
+  await modalOK(`<div class="big bounce">🌀</div><h2>시간 소용돌이!</h2><p>타임머신이 흔들려서 <b>남은 카드의 자리가 바뀌어요!</b><br>다시 잘 기억해요.</p>`,'으악! 계속하기 ▶');
+  document.querySelectorAll('.card:not(.gone)').forEach(el=>el.classList.add('swirl'));
+  await sleep(400);
+  const idx=S.deck.map((c,i)=>c.gone?null:i).filter(i=>i!==null);
+  const mixed=shuffle(idx.map(i=>S.deck[i]));
+  idx.forEach((i,k)=>S.deck[i]=mixed[k]);
+  buildTable();
+  document.querySelectorAll('.card:not(.gone)').forEach(el=>el.classList.add('swirl'));
+  await sleep(800);
+  document.querySelectorAll('.card').forEach(el=>el.classList.remove('swirl'));
+}
+
+/* =========================================================
+   결과
+   ========================================================= */
+function showResults(){
+  S.over=true; renderSide();
+  const sorted=[...S.players].sort((a,b)=>b.pairs.length-a.pairs.length);
+  let rank=0,prev=null; sorted.forEach((p,i)=>{if(p.pairs.length!==prev){rank=i+1;prev=p.pairs.length;}p.rank=rank;});
+  const winners=sorted.filter(p=>p.rank===1 && p.pairs.length>0);
+  const MED={1:'🥇',2:'🥈',3:'🥉',4:'🏅'};
+  const rows=sorted.map(p=>`<div class="rank ${p.rank===1?'first':''}">${MED[p.rank]} ${ava(p)} ${esc(p.name)}
+    <span style="font-size:15px;opacity:.75">${p.pairs.map(pr=>REGION_INFO[pr[0].r].ic).join('')}</span>
+    <span class="pts">🃏 ${p.pairs.length}짝 ${p.rank===1&&p.pairs.length>0?'<b style="color:#c47f00">+50골드</b>':''}</span></div>`).join('');
+  const award=(ic,title,val,unit,min=1)=>{ const best=Math.max(...S.players.map(val)); if(best<min) return '';
+    return `<div class="award">${ic}<b>${title}</b>${S.players.filter(p=>val(p)===best).map(p=>esc(p.name)).join(', ')} (${best}${unit})</div>`; };
+  const acc=p=>p.tries?Math.round(p.pairs.length/p.tries*100):0;
+  const awards=award('🔥','콤보 왕',p=>p.maxCombo,'연속',2)+award('🎯','정확도 왕',acc,'%')+award('🧭','지역 탐험가',p=>new Set(p.pairs.map(x=>x[0].r)).size,'개 지역');
+  // 변화 정리표
+  const sum=Object.keys(REGION_INFO).map(r=>`<tr><th>${REGION_INFO[r].ic} ${r}</th>
+    <td>${CARDS.filter(c=>c.r===r&&c.era==='old').map(c=>'• '+c.t).join('<br>')}</td>
+    <td>${CARDS.filter(c=>c.r===r&&c.era==='new').map(c=>'• '+c.t).join('<br>')}</td></tr>`).join('');
+  sfx('fanfare'); confetti(200); setTimeout(()=>confetti(150,innerWidth*.25),600); setTimeout(()=>confetti(150,innerWidth*.75),1100);
+  showModal(`<div class="big bounce">🏆</div><h2>시간 여행 끝!</h2>
+    <p>${winners.length?winners.map(w=>`<b>${esc(w.name)}</b>`).join(', ')+(winners.length>1?' 공동 우승! 모두':' 우승!')+' <b>+50골드</b> 🎉':'다음엔 짝을 꼭 찾아봐요!'}</p>
+    ${rows}
+    ${awards?`<h3 style="margin:12px 0 4px">🎖️ 특별상</h3><div class="awards">${awards}</div>`:''}
+    <h3 style="margin:14px 0 4px">📚 지역은 이렇게 변했어요</h3>
+    <table class="sum"><tr><th>지역</th><th>⏪ 옛날</th><th>오늘날 ⏩</th></tr>${sum}</table>
+    <div class="modal-btns"><button class="btn primary" id="again">같은 친구들과 다시 하기</button><button class="btn" id="newG">처음 화면으로</button></div>`);
+  $('again').onclick=()=>{closeModal();startGame();};
+  $('newG').onclick=()=>{closeModal();$('game').classList.add('hidden');$('setup').classList.remove('hidden');};
+}
+</script>
+</body>
+</html>
